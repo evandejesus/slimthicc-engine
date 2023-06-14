@@ -6,8 +6,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var Sq120toSq64 [boardSquareNum]int
-var Sq64toSq120 [64]int
+var sq120toSq64 [boardSquareNum]int
+var sq64toSq120 [64]int
 
 const (
 	maxGameMoves   = 2048
@@ -150,12 +150,13 @@ const (
 )
 
 const (
-	WKCastling = 1 << iota
-	WQCastling
-	BKCastling
-	BQCastling
+	wKCastling = 1 << iota
+	wQCastling
+	bKCastling
+	bQCastling
 )
 
+// Board is board
 type Board struct {
 	Pieces      [boardSquareNum]int
 	Pawns       [3]uint64
@@ -189,13 +190,13 @@ func (b *Board) InitBoard() {
 
 	var playBitBoard uint64 = 0
 	log.Info().Msg("Start")
-	PrintBitBoard(playBitBoard)
-	playBitBoard = playBitBoard | (uint64(1) << Sq120toSq64[d2])
+	printBitBoard(playBitBoard)
+	playBitBoard = playBitBoard | (uint64(1) << sq120toSq64[d2])
 	log.Info().Msg("D2 Added")
-	PrintBitBoard(playBitBoard)
-	playBitBoard = playBitBoard | (uint64(1) << Sq120toSq64[g2])
+	printBitBoard(playBitBoard)
+	playBitBoard = playBitBoard | (uint64(1) << sq120toSq64[g2])
 	log.Info().Msg("G2 Added")
-	PrintBitBoard(playBitBoard)
+	printBitBoard(playBitBoard)
 }
 
 func printLists() {
@@ -203,7 +204,7 @@ func printLists() {
 		if i%10 == 0 {
 			fmt.Println()
 		}
-		fmt.Printf("%5d", Sq120toSq64[i])
+		fmt.Printf("%5d", sq120toSq64[i])
 	}
 
 	fmt.Println()
@@ -213,7 +214,7 @@ func printLists() {
 		if i%8 == 0 {
 			fmt.Println()
 		}
-		fmt.Printf("%5d", Sq64toSq120[i])
+		fmt.Printf("%5d", sq64toSq120[i])
 	}
 }
 
@@ -222,17 +223,17 @@ func initSq120toSq64() {
 	sq := a1
 	sq64 := 0
 	for index = 0; index < boardSquareNum; index++ {
-		Sq120toSq64[index] = 64
+		sq120toSq64[index] = 64
 	}
 	for index = 0; index < 64; index++ {
-		Sq64toSq120[index] = 120
+		sq64toSq120[index] = 120
 	}
 
 	for rank := rank1; rank <= rank8; rank++ {
 		for file := fileA; file <= fileH; file++ {
 			sq = fr2sq(file, rank)
-			Sq64toSq120[sq64] = sq
-			Sq120toSq64[sq] = sq64
+			sq64toSq120[sq64] = sq
+			sq120toSq64[sq] = sq64
 			sq64 += 1
 		}
 	}
@@ -243,6 +244,6 @@ func fr2sq(f, r int) int {
 }
 
 func sq64(sq120 int) int {
-	return Sq120toSq64[sq120]
+	return sq120toSq64[sq120]
 
 }
