@@ -1,6 +1,11 @@
 package board
 
-import "github.com/rs/zerolog/log"
+import (
+	"fmt"
+	"math/rand"
+
+	"github.com/rs/zerolog/log"
+)
 
 var sq120toSq64 [boardSquareNum]int
 var sq64toSq120 [64]int
@@ -197,11 +202,35 @@ func (b *Board) InitBoard() {
 
 	var playBitBoard uint64 = 0
 
-	for index := 0; index < 64; index++ {
-		log.Info().Int("index", index)
-		PrintBitBoard(setMask[index])
-		log.Print("\n")
-	}
+	// for index := 0; index < 64; index++ {
+	// 	log.Info().Int("index", index).Send()
+	// 	PrintBitBoard(clearMask[index])
+	// }
+
+	var pieceOne int32 = rand.Int31()
+	var pieceTwo int32 = rand.Int31()
+	var pieceThree int32 = rand.Int31()
+	var pieceFour int32 = rand.Int31()
+	var key int32 = pieceOne ^ pieceTwo ^ pieceFour
+	var tempKey int32 = pieceOne
+	tempKey ^= pieceThree
+	tempKey ^= pieceThree
+	tempKey ^= pieceFour
+	tempKey ^= pieceTwo
+	log.Info().Msg(fmt.Sprintf("key:%X", key))
+	log.Info().Msg(fmt.Sprintf("tempKey:%X", tempKey))
+
+	setBit(&playBitBoard, 61)
+	PrintBitBoard(playBitBoard)
+
+}
+
+func setBit(bb *uint64, sq int) {
+	*bb = *bb | setMask[sq]
+}
+
+func clearBit(bb *uint64, sq int) {
+	*bb = *bb & clearMask[sq]
 }
 
 func initSq120toSq64() {
