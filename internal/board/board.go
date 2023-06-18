@@ -1,13 +1,11 @@
 package board
 
-import (
-	"fmt"
-
-	"github.com/rs/zerolog/log"
-)
+import "github.com/rs/zerolog/log"
 
 var sq120toSq64 [boardSquareNum]int
 var sq64toSq120 [64]int
+var setMask [64]uint64
+var clearMask [64]uint64
 
 const (
 	maxGameMoves   = 2048
@@ -185,36 +183,24 @@ type Undo struct {
 	PosKey     int
 }
 
-func (b *Board) InitBoard() {
-	initSq120toSq64()
-
-	var playBitBoard uint64 = 0
-	log.Info().Msg("Start")
-	printBitBoard(playBitBoard)
-	playBitBoard = playBitBoard | (uint64(1) << sq120toSq64[d2])
-	log.Info().Msg("D2 Added")
-	printBitBoard(playBitBoard)
-	playBitBoard = playBitBoard | (uint64(1) << sq120toSq64[g2])
-	log.Info().Msg("G2 Added")
-	printBitBoard(playBitBoard)
+func initBitMasks() {
+	var index int = 0
+	for index = 0; index < 64; index++ {
+		setMask[index] = setMask[index] | (uint64(1) << uint64(index))
+		clearMask[index] = ^setMask[index]
+	}
 }
 
-func printLists() {
-	for i := 0; i < boardSquareNum; i++ {
-		if i%10 == 0 {
-			fmt.Println()
-		}
-		fmt.Printf("%5d", sq120toSq64[i])
-	}
+func (b *Board) InitBoard() {
+	initSq120toSq64()
+	initBitMasks()
 
-	fmt.Println()
-	fmt.Println()
+	var playBitBoard uint64 = 0
 
-	for i := 0; i < 64; i++ {
-		if i%8 == 0 {
-			fmt.Println()
-		}
-		fmt.Printf("%5d", sq64toSq120[i])
+	for index := 0; index < 64; index++ {
+		log.Info().Int("index", index)
+		PrintBitBoard(setMask[index])
+		log.Print("\n")
 	}
 }
 

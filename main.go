@@ -11,16 +11,17 @@ import (
 var chessboard board.Board
 
 func init() {
-	chessboard.InitBoard()
-}
-
-func main() {
 	// UNIX Time is faster and smaller than most timestamps
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
 	if os.Getenv("GO_ENV") == "development" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
+
+	chessboard.InitBoard()
+}
+
+func main() {
 
 	// log.Info().Msg("hello world")
 	// log.Print(chessboard.BigPieces)
