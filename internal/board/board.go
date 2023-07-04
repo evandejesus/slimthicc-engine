@@ -50,6 +50,11 @@ func (b *Board) ResetBoard() {
 	b.PosKey = 0
 }
 
+func (b *Board) GeneratePosKey() uint64 {
+	//TODO: https://www.youtube.com/watch?v=WqVwQBXLwE0&list=PLZ1QII7yudbc-Ky058TEaOstZHVbT-2hg&index=12
+	return 0
+}
+
 func (b *Board) ParseFen(fen string) {
 
 	if fen == "" {
@@ -67,9 +72,11 @@ func (b *Board) ParseFen(fen string) {
 
 	b.ResetBoard()
 
+	// set pieces / blanks for each square
 	for charIndex = 0; rank >= rank1; charIndex++ {
+		fenChar := fen[charIndex]
 		count = 1
-		switch fen[charIndex] {
+		switch fenChar {
 		case 'p':
 			piece = bP
 
@@ -108,7 +115,7 @@ func (b *Board) ParseFen(fen string) {
 
 		case '1', '2', '3', '4', '5', '6', '7', '8':
 			piece = empty
-			count = int(fen[charIndex] - '0')
+			count = int(fenChar - '0')
 
 		case '/', ' ':
 			rank--
@@ -117,10 +124,11 @@ func (b *Board) ParseFen(fen string) {
 
 		default:
 			err := errors.New("FEN Error")
-			log.Error().Stack().Err(err).Str("fen[charIndex]", string(fen[charIndex])).Send()
+			log.Error().Stack().Err(err).Str("fenChar", string(fenChar)).Send()
 			os.Exit(1)
 		}
 
+		// use count to skip empty squares
 		for i := 0; i < count; i++ {
 			sq64 = rank*8 + file
 			sq120 = fsq120(sq64)
@@ -131,11 +139,56 @@ func (b *Board) ParseFen(fen string) {
 		}
 	}
 
+	// White or black
 	if fen[charIndex] != 'w' && fen[charIndex] != 'b' {
 		err := errors.New("FEN Error: Char should be w or b")
 		log.Error().Stack().Err(err).Int("charIndex", charIndex).Str("fen[charIndex]", string(fen[charIndex])).Send()
 		os.Exit(1)
 	}
+
+	if fen[charIndex] == 'w' {
+		b.Side = white
+	} else {
+		b.Side = black
+	}
+
+	// Castling permission
+	charIndex += 2
+
+	for i := 0; i < 4; i++ {
+		if fen[charIndex] == ' ' {
+			break
+		}
+		switch fen[charIndex] {
+		case 'K':
+			b.CastlePerm |= wKCastling
+		case 'Q':
+			b.CastlePerm |= wQCastling
+		case 'k':
+			b.CastlePerm |= bKCastling
+		case 'q':
+			b.CastlePerm |= bQCastling
+		}
+		charIndex++
+	}
+	charIndex++
+
+	if b.CastlePerm < 0 || b.CastlePerm > 15 {
+		err := errors.New("FEN Error: CastlePerm invalid")
+		log.Error().Stack().Err(err).Int("b.CastlePerm", b.CastlePerm).Send()
+		os.Exit(1)
+	}
+
+	// en passant square
+	if fen[charIndex] != '-' {
+		file = int(fen[charIndex] - 'a')
+		rank = int(fen[charIndex+1] - '1')
+
+		// TODO: add asserts
+		b.EnPassant = fr2sq(file, rank)
+	}
+
+	b.PosKey = b.GeneratePosKey()
 }
 
 func setBit(bb *uint64, sq int) {
