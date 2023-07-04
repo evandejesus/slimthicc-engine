@@ -23,16 +23,7 @@ func init() {
 
 func main() {
 
-	// log.Info().Msg("hello world")
-	// log.Print(chessboard.BigPieces)
-
-	// f, err := os.Create("example.svg")
-	// if err != nil {
-	// 	log.Error().Err(err).Send()
-	// }
-	// defer f.Close()
-	// fenStr := "8/5k2/3p4/1p1Pp2p/pP2Pp1P/P4P1K/8/8 b - - 99 50"
-	// pos := &chess.Position{}
-	// pos.UnmarshalText([]byte(fenStr))
-	// image.SVG(f, pos.Board())
+	var b board.Board
+	startFen := "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+	b.ParseFen(startFen)
 }

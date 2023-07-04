@@ -1,192 +1,11 @@
 package board
 
 import (
-	"fmt"
-	"math/rand"
+	"errors"
+	"os"
 
 	"github.com/rs/zerolog/log"
 )
-
-var sq120toSq64 [boardSquareNum]int
-var sq64toSq120 [64]int
-var setMask [64]uint64
-var clearMask [64]uint64
-
-const (
-	maxGameMoves   = 2048
-	boardSquareNum = 120
-)
-
-const (
-	empty = iota
-	wP
-	wN
-	wB
-	wR
-	wQ
-	wK
-	bP
-	bN
-	bB
-	bR
-	bQ
-	bK
-)
-
-const (
-	fileA = iota
-	fileB
-	fileC
-	fileD
-	fileE
-	fileF
-	fileG
-	fileH
-	fileNone
-)
-
-const (
-	rank1 = iota
-	rank2
-	rank3
-	rank4
-	rank5
-	rank6
-	rank7
-	rank8
-	rankNone
-)
-
-const (
-	white = iota
-	black
-	both
-)
-
-const (
-	a1 = 21 + iota
-	b1
-	c1
-	d1
-	e1
-	f1
-	g1
-	h1
-)
-
-const (
-	a2 = 31 + iota
-	b2
-	c2
-	d2
-	e2
-	f2
-	g2
-	h2
-)
-
-const (
-	a3 = 41 + iota
-	b3
-	c3
-	d3
-	e3
-	f3
-	g3
-	h3
-)
-
-const (
-	a4 = 51 + iota
-	b4
-	c4
-	d4
-	e4
-	f4
-	g4
-	h4
-)
-
-const (
-	a5 = 61 + iota
-	b5
-	c5
-	d5
-	e5
-	f5
-	g5
-	h5
-)
-
-const (
-	a6 = 71 + iota
-	b6
-	c6
-	d6
-	e6
-	f6
-	g6
-	h6
-)
-
-const (
-	a7 = 81 + iota
-	b7
-	c7
-	d7
-	e7
-	f7
-	g7
-	h7
-)
-
-const (
-	a8 = 91 + iota
-	b8
-	c8
-	d8
-	e8
-	f8
-	g8
-	h8
-	noSquare
-)
-
-const (
-	wKCastling = 1 << iota
-	wQCastling
-	bKCastling
-	bQCastling
-)
-
-// Board is board
-type Board struct {
-	Pieces      [boardSquareNum]int
-	Pawns       [3]uint64
-	KingSquare  [2]int
-	Side        int
-	EnPassant   int
-	FiftyMove   int
-	Ply         int
-	HistPly     int
-	PosKey      uint64
-	PieceNum    [13]int
-	BigPieces   [3]int
-	MajorPieces [3]int
-	MinorPieces [3]int
-	CastlePerm  int
-	History     [maxGameMoves]Undo
-
-	PieceList [13][10]int
-}
-
-type Undo struct {
-	Move       int
-	CastlePerm int
-	EnPassant  int
-	FiftyMove  int
-	PosKey     int
-}
 
 func initBitMasks() {
 	var index int = 0
@@ -200,29 +19,123 @@ func (b *Board) InitBoard() {
 	initSq120toSq64()
 	initBitMasks()
 
-	var playBitBoard uint64 = 0
+}
 
-	// for index := 0; index < 64; index++ {
-	// 	log.Info().Int("index", index).Send()
-	// 	PrintBitBoard(clearMask[index])
-	// }
+func (b *Board) ResetBoard() {
+	index := 0
+	for index = 0; index < boardSquareNum; index++ {
+		b.Pieces[index] = offBoard
+	}
+	for index = 0; index < 64; index++ {
+		b.Pieces[fsq120(index)] = empty
+	}
+	for index = 0; index < 3; index++ {
+		b.BigPieces[index] = 0
+		b.MajorPieces[index] = 0
+		b.MinorPieces[index] = 0
+		b.Pawns[index] = 0
+	}
+	for index = 0; index < 13; index++ {
+		b.PieceNum[index] = 0
+	}
+	b.KingSquare[white] = noSquare
+	b.KingSquare[black] = noSquare
 
-	var pieceOne int32 = rand.Int31()
-	var pieceTwo int32 = rand.Int31()
-	var pieceThree int32 = rand.Int31()
-	var pieceFour int32 = rand.Int31()
-	var key int32 = pieceOne ^ pieceTwo ^ pieceFour
-	var tempKey int32 = pieceOne
-	tempKey ^= pieceThree
-	tempKey ^= pieceThree
-	tempKey ^= pieceFour
-	tempKey ^= pieceTwo
-	log.Info().Msg(fmt.Sprintf("key:%X", key))
-	log.Info().Msg(fmt.Sprintf("tempKey:%X", tempKey))
+	b.Side = both
+	b.EnPassant = noSquare
+	b.FiftyMove = 0
+	b.Ply = 0
+	b.HistPly = 0
+	b.CastlePerm = 0
+	b.PosKey = 0
+}
 
-	setBit(&playBitBoard, 61)
-	PrintBitBoard(playBitBoard)
+func (b *Board) ParseFen(fen string) {
 
+	if fen == "" {
+		log.Error().Msg("test")
+	}
+
+	rank := rank8
+	file := fileA
+	piece := 0
+	count := 0
+
+	sq64 := 0
+	sq120 := 0
+	charIndex := 0
+
+	b.ResetBoard()
+
+	for charIndex = 0; rank >= rank1; charIndex++ {
+		count = 1
+		switch fen[charIndex] {
+		case 'p':
+			piece = bP
+
+		case 'r':
+			piece = bR
+
+		case 'n':
+			piece = bN
+
+		case 'b':
+			piece = bB
+
+		case 'k':
+			piece = bK
+
+		case 'q':
+			piece = bQ
+
+		case 'P':
+			piece = wP
+
+		case 'R':
+			piece = wR
+
+		case 'N':
+			piece = wN
+
+		case 'B':
+			piece = wB
+
+		case 'K':
+			piece = wK
+
+		case 'Q':
+			piece = wQ
+
+		case '1', '2', '3', '4', '5', '6', '7', '8':
+			piece = empty
+			count = int(fen[charIndex] - '0')
+
+		case '/', ' ':
+			rank--
+			file = fileA
+			continue
+
+		default:
+			err := errors.New("FEN Error")
+			log.Error().Stack().Err(err).Str("fen[charIndex]", string(fen[charIndex])).Send()
+			os.Exit(1)
+		}
+
+		for i := 0; i < count; i++ {
+			sq64 = rank*8 + file
+			sq120 = fsq120(sq64)
+			if piece != empty {
+				b.Pieces[sq120] = piece
+			}
+			file++
+		}
+	}
+
+	if fen[charIndex] != 'w' && fen[charIndex] != 'b' {
+		err := errors.New("FEN Error: Char should be w or b")
+		log.Error().Stack().Err(err).Int("charIndex", charIndex).Str("fen[charIndex]", string(fen[charIndex])).Send()
+		os.Exit(1)
+	}
 }
 
 func setBit(bb *uint64, sq int) {
@@ -258,7 +171,10 @@ func fr2sq(f, r int) int {
 	return 21 + f + r*10
 }
 
-func sq64(sq120 int) int {
+func fsq64(sq120 int) int {
 	return sq120toSq64[sq120]
+}
 
+func fsq120(sq64 int) int {
+	return sq64toSq120[sq64]
 }
